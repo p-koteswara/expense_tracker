@@ -26,8 +26,13 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[ExpenseResponse])
-def get_expenses(db: Session = Depends(get_db)):
-    return db.query(Expense).all()
+def get_expenses(
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    expenses = db.query(Expense).offset(skip).limit(limit).all()
+    return expenses
 
 
 @router.get("/{expense_id}", response_model=ExpenseResponse)

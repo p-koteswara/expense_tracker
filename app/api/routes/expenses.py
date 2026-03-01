@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import asc, desc
 
 from app.db.session import SessionLocal
 from app.db.models import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseResponse, ExpenseUpdate
-
 router = APIRouter()
 
 
@@ -29,9 +29,26 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 def get_expenses(
     skip: int = 0,
     limit: int = 10,
+    sort_by: str = "id",
+    order: str = "asc",
     db: Session = Depends(get_db)
 ):
-    expenses = db.query(Expense).offset(skip).limit(limit).all()
+    
+    query = db.query(Expense)
+
+    # Validate sortable fields
+    if not hasattr(Expense, sort_by):
+        raise HTTPException(status_code=400, detail="Invalid sort field")
+
+    column = getattr(Expense, sort_by)
+
+    if order == "desc":
+        query = query.order_by(desc(column))
+    else:
+        query = query.order_by(asc(column))
+
+    expenses = query.offset(skip).limit(limit).all()
+
     return expenses
 
 

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
+from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.db.models import Expense
+from app.db.models.expense import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseResponse, ExpenseUpdate
+from app.core.jwt import get_current_user
+
 router = APIRouter()
 
 
@@ -17,7 +19,11 @@ def get_db():
 
 
 @router.post("/", response_model=ExpenseResponse)
-def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
+def create_expense(
+    expense: ExpenseCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     db_expense = Expense(**expense.model_dump())
     db.add(db_expense)
     db.commit()
@@ -31,7 +37,8 @@ def get_expenses(
     limit: int = 10,
     sort_by: str = "id",
     order: str = "asc",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     
     query = db.query(Expense)
@@ -53,7 +60,11 @@ def get_expenses(
 
 
 @router.get("/{expense_id}", response_model=ExpenseResponse)
-def get_expense(expense_id: int, db: Session = Depends(get_db)):
+def get_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -61,7 +72,12 @@ def get_expense(expense_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{expense_id}", response_model=ExpenseResponse)
-def update_expense(expense_id: int, updated_data: ExpenseUpdate, db: Session = Depends(get_db)):
+def update_expense(
+    expense_id: int,
+    updated_data: ExpenseUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -76,7 +92,11 @@ def update_expense(expense_id: int, updated_data: ExpenseUpdate, db: Session = D
 
 
 @router.delete("/{expense_id}")
-def delete_expense(expense_id: int, db: Session = Depends(get_db)):
+def delete_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")

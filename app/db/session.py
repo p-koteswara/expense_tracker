@@ -1,13 +1,9 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from app.core.config import DATABASE_URL
+from sqlalchemy.orm import sessionmaker
+from app.db.base import Base
 
-engine = create_engine(DATABASE_URL, echo=True)
+DATABASE_URL = "sqlite:///./expense_tracker.db"
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
-Base = declarative_base()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.db.session import engine
-from app.db.models import Base
-from app.api.routes import expenses
+from app.db.base import Base
+from app.api.routes import expenses, auth
 
 app = FastAPI()
 
@@ -13,6 +13,11 @@ app.include_router(
     tags=["Expenses"]
 )
 
+app.include_router(
+    auth.router,
+    prefix="/auth",
+    tags=["Auth"]
+)
 
 @app.get("/")
 def root():

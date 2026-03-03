@@ -23,22 +23,10 @@ def list_categories(
     current_user=Depends(get_current_user),
 ):
     """
-    List all categories.
-    On first call, seed a few default categories if none exist.
+    List all categories that currently exist in the database.
+    This endpoint no longer auto‑seeds default categories; it simply
+    returns whatever categories have been created so far.
     """
-    default_names = ["Food", "Transport", "Bills", "Shopping", "Entertainment"]
-
-    existing_defaults = (
-        db.query(Category)
-        .filter(Category.is_default.is_(True))
-        .all()
-    )
-
-    if not existing_defaults:
-        for name in default_names:
-            db.add(Category(name=name, is_default=True))
-        db.commit()
-
     categories = db.query(Category).all()
     return categories
 

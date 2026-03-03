@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.db.models.expense import Expense
+from app.db.models.category import Category
 from app.schemas.expense import ExpenseCreate, ExpenseResponse, ExpenseUpdate
 from app.core.jwt import get_current_user
 
@@ -24,6 +25,17 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    # Ensure there is a Category record for this expense's category
+    category_name = expense.category.strip()
+    if category_name:
+        existing_category = (
+            db.query(Category)
+            .filter(Category.name == category_name)
+            .first()
+        )
+        if not existing_category:
+            db.add(Category(name=category_name, is_default=False))
+
     db_expense = Expense(**expense.model_dump())
     db.add(db_expense)
     db.commit()
@@ -81,6 +93,17 @@ def update_expense(
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+
+    # Ensure there is a Category record for the updated category value
+    category_name = updated_data.category.strip()
+    if category_name:
+        existing_category = (
+            db.query(Category)
+            .filter(Category.name == category_name)
+            .first()
+        )
+        if not existing_category:
+            db.add(Category(name=category_name, is_default=False))
 
     expense.title = updated_data.title
     expense.amount = updated_data.amount

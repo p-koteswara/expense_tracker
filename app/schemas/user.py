@@ -2,8 +2,18 @@ from pydantic import BaseModel, EmailStr
 from app.db.base import Base
 
 class UserCreate(BaseModel):
+    name: str
     email: EmailStr
     password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+
+    class Config:
+        from_attributes = True
 
 
 class UserLogin(BaseModel):

@@ -1,19 +1,24 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
-class ExpenseCreate(BaseModel):
-    title: str
+class ExpenseBase(BaseModel):
+    description: str
     amount: float
-    category: str
+    category_id: int
+    date: Optional[datetime] = None
+    note: Optional[str] = None
 
-class ExpenseResponse(ExpenseCreate):
+class ExpenseCreate(ExpenseBase):
+    pass
+
+class ExpenseResponse(ExpenseBase):
     id: int
-    created_at: datetime
+    category_name: Optional[str] = None
+    category_emoji: Optional[str] = None
 
     class Config:
         from_attributes = True
 
-class ExpenseUpdate(BaseModel):
-    title: str
-    amount: float
-    category: str
+class ExpenseUpdate(ExpenseBase):
+    pass

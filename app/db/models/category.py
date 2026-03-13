@@ -8,5 +8,5 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
+    emoji = Column(String, default="💰", nullable=False)
     is_default = Column(Boolean, default=False, nullable=False)
-

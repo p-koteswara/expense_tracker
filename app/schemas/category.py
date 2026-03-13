@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class CategoryBase(BaseModel):
     name: str
+    emoji: str = "💰"
 
 
 class CategoryCreate(CategoryBase):
@@ -15,4 +16,3 @@ class CategoryResponse(CategoryBase):
 
     class Config:
         from_attributes = True
-

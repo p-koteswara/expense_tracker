@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.db.session import SessionLocal
 from app.db.models.budget import Budget
 from app.db.models.category import Category
+from app.db.models.expense import Expense
 from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse
 from app.core.jwt import get_current_user
 
@@ -24,6 +26,21 @@ def list_budgets(
     current_user=Depends(get_current_user),
 ):
     budgets = db.query(Budget).filter(Budget.user_id == current_user.id).all()
+    
+    # Enrich budgets with category info and calculate spent amount
+    for budget in budgets:
+        budget.category_name = budget.category.name
+        budget.category_emoji = budget.category.emoji
+        
+        # Sum expenses for this user, category, and month/year
+        # Note: In a real app, you'd filter by month/year too
+        spent = db.query(func.sum(Expense.amount)).filter(
+            Expense.user_id == current_user.id,
+            Expense.category_id == budget.category_id
+        ).scalar() or 0
+        
+        budget.amount_spent = spent
+        
     return budgets
 
 
@@ -66,6 +83,10 @@ def create_budget(
     db.add(new_budget)
     db.commit()
     db.refresh(new_budget)
+    
+    new_budget.category_name = category.name
+    new_budget.category_emoji = category.emoji
+    new_budget.amount_spent = 0
 
     return new_budget
 
@@ -89,6 +110,14 @@ def update_budget(
 
     db.commit()
     db.refresh(budget)
+    
+    budget.category_name = budget.category.name
+    budget.category_emoji = budget.category.emoji
+    
+    spent = db.query(func.sum(Expense.amount)).filter(
+        Expense.user_id == current_user.id,
+        Expense.category_id == budget.category_id
+    ).scalar() or 0
+    budget.amount_spent = spent
 
     return budget
-

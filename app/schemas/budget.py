@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class BudgetBase(BaseModel):
@@ -18,7 +19,9 @@ class BudgetUpdate(BaseModel):
 
 class BudgetResponse(BudgetBase):
     id: int
+    amount_spent: float = 0
+    category_name: Optional[str] = None
+    category_emoji: Optional[str] = None
 
     class Config:
         from_attributes = True
-

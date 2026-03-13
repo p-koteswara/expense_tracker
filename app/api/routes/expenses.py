@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
@@ -25,21 +25,22 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # Ensure there is a Category record for this expense's category
-    category_name = expense.category.strip()
-    if category_name:
-        existing_category = (
-            db.query(Category)
-            .filter(Category.name == category_name)
-            .first()
-        )
-        if not existing_category:
-            db.add(Category(name=category_name, is_default=False))
+    # Ensure category exists
+    category = db.query(Category).filter(Category.id == expense.category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
 
-    db_expense = Expense(**expense.model_dump())
+    db_expense = Expense(
+        **expense.model_dump(),
+        user_id=current_user.id
+    )
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
+    
+    # Return with category info
+    db_expense.category_name = category.name
+    db_expense.category_emoji = category.emoji
     return db_expense
 
 
@@ -47,17 +48,20 @@ def create_expense(
 def get_expenses(
     skip: int = 0,
     limit: int = 10,
-    sort_by: str = "id",
-    order: str = "asc",
+    sort_by: str = "date",
+    order: str = "desc",
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     
-    query = db.query(Expense)
+    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+
+    # Join with Category to get name and emoji
+    query = query.join(Category)
 
     # Validate sortable fields
-    if not hasattr(Expense, sort_by):
-        raise HTTPException(status_code=400, detail="Invalid sort field")
+    if not hasattr(Expense, sort_by) and sort_by != "id":
+        sort_by = "date"
 
     column = getattr(Expense, sort_by)
 
@@ -68,6 +72,11 @@ def get_expenses(
 
     expenses = query.offset(skip).limit(limit).all()
 
+    # Add category details to response
+    for exp in expenses:
+        exp.category_name = exp.category.name
+        exp.category_emoji = exp.category.emoji
+
     return expenses
 
 
@@ -77,9 +86,12 @@ def get_expense(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.user_id == current_user.id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+    
+    expense.category_name = expense.category.name
+    expense.category_emoji = expense.category.emoji
     return expense
 
 
@@ -90,27 +102,18 @@ def update_expense(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.user_id == current_user.id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
 
-    # Ensure there is a Category record for the updated category value
-    category_name = updated_data.category.strip()
-    if category_name:
-        existing_category = (
-            db.query(Category)
-            .filter(Category.name == category_name)
-            .first()
-        )
-        if not existing_category:
-            db.add(Category(name=category_name, is_default=False))
-
-    expense.title = updated_data.title
-    expense.amount = updated_data.amount
-    expense.category = updated_data.category
+    for key, value in updated_data.model_dump().items():
+        setattr(expense, key, value)
 
     db.commit()
     db.refresh(expense)
+    
+    expense.category_name = expense.category.name
+    expense.category_emoji = expense.category.emoji
     return expense
 
 
@@ -120,7 +123,7 @@ def delete_expense(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.user_id == current_user.id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
 

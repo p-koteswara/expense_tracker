@@ -22,11 +22,6 @@ def list_categories(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """
-    List all categories that currently exist in the database.
-    This endpoint no longer auto‑seeds default categories; it simply
-    returns whatever categories have been created so far.
-    """
     categories = db.query(Category).all()
     return categories
 
@@ -43,6 +38,7 @@ def create_category(
 
     new_category = Category(
         name=category.name,
+        emoji=category.emoji,
         is_default=False,
     )
 
@@ -52,3 +48,17 @@ def create_category(
 
     return new_category
 
+
+@router.delete("/{category_id}")
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    db.delete(category)
+    db.commit()
+    return {"message": "Category deleted"}

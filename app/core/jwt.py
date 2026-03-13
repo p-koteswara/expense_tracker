@@ -11,9 +11,7 @@ from app.db.models.user import User
 from app.db.models.revoked_token import RevokedToken
 
 
-SECRET_KEY = "your_secret_key_here"  # later move to .env
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 

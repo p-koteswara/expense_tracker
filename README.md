@@ -33,7 +33,7 @@ expense_tracker/
 Run Locally
 Clone the repo
 ```bash
-   git clone https://github.com/your-username/expense-tracker.git
+   git clone https://github.com/p-koteswara/expense_tracker
    cd expense-tracker
    ```
 Create and activate a virtual environment

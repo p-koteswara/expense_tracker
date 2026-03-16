@@ -61,18 +61,21 @@ Open the API docs
 ```
    http://localhost:8000/docs
    ```
-API Overview
-Method	Endpoint	Description	Auth
-POST	`/auth/register`	Create account	Public
-POST	`/auth/login`	Login, get JWT	Public
-GET	`/expenses`	List expenses	Required
-POST	`/expenses`	Add expense	Required
-PUT	`/expenses/{id}`	Update expense	Required
-DELETE	`/expenses/{id}`	Delete expense	Required
-GET	`/categories`	List categories	Required
-POST	`/categories`	Add category	Required
-GET	`/budgets`	List budgets	Required
-POST	`/budgets`	Set budget	Required
-Deployment
+## API Overview
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/auth/register` | Create account | Public |
+| POST | `/auth/login` | Login, get JWT | Public |
+| GET | `/expenses` | List expenses | Required |
+| POST | `/expenses` | Add expense | Required |
+| PUT | `/expenses/{id}` | Update expense | Required |
+| DELETE | `/expenses/{id}` | Delete expense | Required |
+| GET | `/categories` | List categories | Required |
+| POST | `/categories` | Add category | Required |
+| GET | `/budgets` | List budgets | Required |
+| POST | `/budgets` | Set budget | Required |
+
+## Deployment
 Backend is deployed on Render.  
 Frontend (Next.js) is deployed on Vercel — cashually.vercel.app

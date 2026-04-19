@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.db.models.user import User
 from app.db.models.revoked_token import RevokedToken
-from app.schemas.user import UserCreate, UserLogin, UserOut
+from app.schemas.user import UserCreate, UserOut
 from app.core.security import hash_password, verify_password
 from app.core.jwt import ALGORITHM, SECRET_KEY, create_access_token, get_current_user, oauth2_scheme
 
@@ -42,13 +42,39 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(
-    user_data: UserLogin,
-    db: Session = Depends(get_db),
-):
-    db_user = db.query(User).filter(User.email == user_data.email).first()
+async def login(request: Request, db: Session = Depends(get_db)):
+    """
+    Login endpoint compatible with both JSON (frontend) and Form (Swagger) data.
+    """
+    email = None
+    password = None
 
-    if not db_user or not verify_password(user_data.password, db_user.hashed_password):
+    content_type = request.headers.get("content-type") or ""
+
+    if (
+        "application/x-www-form-urlencoded" in content_type
+        or "multipart/form-data" in content_type
+    ):
+        form = await request.form()
+        username = form.get("username")
+        if username is not None:
+            email = str(username).strip() or None
+        pwd = form.get("password")
+        password = str(pwd) if pwd is not None else None
+    else:
+        try:
+            body = await request.json()
+            email = body.get("email")
+            password = body.get("password")
+        except Exception:
+            pass
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password required")
+
+    db_user = db.query(User).filter(User.email == email).first()
+
+    if not db_user or not verify_password(password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     access_token = create_access_token(
@@ -58,7 +84,7 @@ def login(
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": UserOut.from_orm(db_user)
+        "user": UserOut.model_validate(db_user),
     }
 
 

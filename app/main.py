@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.base import Base
 from app.db.session import engine
 from app.api.routes import expenses, auth, categories, budgets
+from app.routers import chat
 
 app = FastAPI(title="Cashually API", description="Personal expense tracker backend")
 
@@ -43,6 +44,12 @@ app.include_router(
     auth.router,
     prefix="/auth",
     tags=["Auth"],
+)
+
+app.include_router(
+    chat.router,
+    prefix="/chat",
+    tags=["Chat"],
 )
 
 

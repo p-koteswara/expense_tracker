@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, extract
 
 from app.db.session import SessionLocal
 from app.db.models.budget import Budget
@@ -33,10 +33,11 @@ def list_budgets(
         budget.category_emoji = budget.category.emoji
         
         # Sum expenses for this user, category, and month/year
-        # Note: In a real app, you'd filter by month/year too
         spent = db.query(func.sum(Expense.amount)).filter(
             Expense.user_id == current_user.id,
-            Expense.category_id == budget.category_id
+            Expense.category_id == budget.category_id,
+            extract('month', Expense.date) == budget.month,
+            extract('year', Expense.date) == budget.year
         ).scalar() or 0
         
         budget.amount_spent = spent
@@ -116,8 +117,30 @@ def update_budget(
     
     spent = db.query(func.sum(Expense.amount)).filter(
         Expense.user_id == current_user.id,
-        Expense.category_id == budget.category_id
+        Expense.category_id == budget.category_id,
+        extract('month', Expense.date) == budget.month,
+        extract('year', Expense.date) == budget.year
     ).scalar() or 0
     budget.amount_spent = spent
 
     return budget
+
+
+@router.delete("/{budget_id}")
+def delete_budget(
+    budget_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    budget = (
+        db.query(Budget)
+        .filter(Budget.id == budget_id, Budget.user_id == current_user.id)
+        .first()
+    )
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+
+    db.delete(budget)
+    db.commit()
+
+    return {"detail": "Budget deleted successfully"}

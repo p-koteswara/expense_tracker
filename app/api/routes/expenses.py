@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.db.models.expense import Expense
 from app.db.models.category import Category
-from app.schemas.expense import ExpenseCreate, ExpenseResponse, ExpenseUpdate
+from app.schemas.expense import (
+    ExpenseCreate,
+    ExpenseResponse,
+    ExpenseSummaryResponse,
+    ExpenseUpdate,
+)
 from app.core.jwt import get_current_user
 
 router = APIRouter()
@@ -42,6 +47,30 @@ def create_expense(
     db_expense.category_name = category.name
     db_expense.category_emoji = category.emoji
     return db_expense
+
+
+@router.get("/summary", response_model=ExpenseSummaryResponse)
+def get_expense_summary(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    total_spent = (
+        db.query(func.sum(Expense.amount))
+        .filter(Expense.user_id == current_user.id)
+        .scalar()
+        or 0
+    )
+    transaction_count = (
+        db.query(func.count(Expense.id))
+        .filter(Expense.user_id == current_user.id)
+        .scalar()
+        or 0
+    )
+
+    return ExpenseSummaryResponse(
+        total_spent=float(total_spent),
+        transaction_count=int(transaction_count),
+    )
 
 
 @router.get("/", response_model=list[ExpenseResponse])

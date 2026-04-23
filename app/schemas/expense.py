@@ -22,3 +22,8 @@ class ExpenseResponse(ExpenseBase):
 
 class ExpenseUpdate(ExpenseBase):
     pass
+
+
+class ExpenseSummaryResponse(BaseModel):
+    total_spent: float = 0
+    transaction_count: int = 0

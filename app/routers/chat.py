@@ -1,7 +1,11 @@
 import json
+import warnings
 from datetime import datetime
 
-import google.generativeai as genai
+# Silence upstream deprecation warning from deprecated SDK package.
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", FutureWarning)
+    import google.generativeai as genai
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func

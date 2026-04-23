@@ -1,12 +1,17 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.db.base import Base
-from app.db.session import engine
+from app.db import models  # Ensure model metadata is registered before create_all.
+from app.db.session import engine, SessionLocal
 from app.api.routes import expenses, auth, categories, budgets
 from app.routers import chat
 
 app = FastAPI(title="Cashually API", description="Personal expense tracker backend")
+logger = logging.getLogger(__name__)
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +26,23 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+
+
+@app.on_event("startup")
+def log_runtime_persistence_state() -> None:
+    """Temporary diagnostics for DB target and user-table persistence."""
+    db = SessionLocal()
+    try:
+        users_table_exists = inspect(engine).has_table("users")
+        user_count = db.execute(text("SELECT COUNT(*) FROM users")).scalar() if users_table_exists else 0
+        logger.info(
+            "Startup DB check: url=%s users_table_exists=%s users_count=%s",
+            engine.url.render_as_string(hide_password=True),
+            users_table_exists,
+            user_count,
+        )
+    finally:
+        db.close()
 
 app.include_router(
     expenses.router,

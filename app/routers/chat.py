@@ -106,13 +106,22 @@ def chat(
         )
     budget_context = "\n".join(budget_lines) if budget_lines else "- No budgets found"
 
+    # Fetch all available categories
+    all_categories = db.query(Category).all()
+    category_names = [c.name for c in all_categories]
+    category_list_str = ", ".join(category_names)
+
     context = f"""You are Cashually AI, a personal spending coach built into a budget tracking app.
 You have two jobs:
 1. Answer questions about the user's spending and give financial advice based on their data
 2. If the user says something like "spent $30 on lunch today" or "add $50 for groceries",
    extract the expense details and return a JSON object in this exact format:
    {{"action": "add_expense", "amount": 50, "description": "groceries", "category": "Food", "date": "today's date"}}
-   For all other messages return: {{"action": "chat", "response": "your response here"}}
+   
+   IMPORTANT for action "add_expense":
+   - Use one of the following existing categories if it fits: {category_list_str}
+   - If none of these categories fit, or you are unsure, leave the "category" field as null.
+   - For all other messages return: {{"action": "chat", "response": "your response here"}}
 
 Today's date is: {today.strftime('%Y-%m-%d')} (YYYY-MM-DD). Use this for any "today", "yesterday", or date-related processing.
 

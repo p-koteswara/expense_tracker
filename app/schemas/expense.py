@@ -27,3 +27,11 @@ class ExpenseUpdate(ExpenseBase):
 class ExpenseSummaryResponse(BaseModel):
     total_spent: float = 0
     transaction_count: int = 0
+
+
+class PaginatedExpenseResponse(BaseModel):
+    items: list[ExpenseResponse]
+    total: int
+    page: int
+    size: int
+    pages: int

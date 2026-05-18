@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Session
+import math
 
 from app.db.session import SessionLocal
 from app.db.models.expense import Expense
@@ -10,6 +11,7 @@ from app.schemas.expense import (
     ExpenseResponse,
     ExpenseSummaryResponse,
     ExpenseUpdate,
+    PaginatedExpenseResponse,
 )
 from app.core.jwt import get_current_user
 
@@ -73,20 +75,32 @@ def get_expense_summary(
     )
 
 
-@router.get("/", response_model=list[ExpenseResponse])
+@router.get("/", response_model=PaginatedExpenseResponse)
 def get_expenses(
-    skip: int = 0,
-    limit: int = 10,
+    page: int = 1,
+    size: int = 10,
+    search: str = None,
+    category_id: int = None,
     sort_by: str = "date",
     order: str = "desc",
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    skip = (page - 1) * size
     
     query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
+    if search:
+        query = query.filter(Expense.description.ilike(f"%{search}%"))
+    
+    if category_id:
+        query = query.filter(Expense.category_id == category_id)
+
     # Join with Category to get name and emoji
     query = query.join(Category)
+
+    # Get total count before pagination
+    total = query.count()
 
     # Validate sortable fields
     if not hasattr(Expense, sort_by) and sort_by != "id":
@@ -99,14 +113,22 @@ def get_expenses(
     else:
         query = query.order_by(asc(column))
 
-    expenses = query.offset(skip).limit(limit).all()
+    expenses = query.offset(skip).limit(size).all()
 
     # Add category details to response
     for exp in expenses:
         exp.category_name = exp.category.name
         exp.category_emoji = exp.category.emoji
 
-    return expenses
+    pages = math.ceil(total / size) if size > 0 else 0
+
+    return {
+        "items": expenses,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
 
 @router.get("/{expense_id}", response_model=ExpenseResponse)
